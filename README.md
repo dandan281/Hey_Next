@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Hey Next
 
-## Getting Started
+> **The next is the best.**
 
-First, run the development server:
+A boundary-aware contact-reveal app for ambiguous romantic situations.
+
+Two people add each other as Hey Next friends instead of trading phone numbers.
+When one of them flips to **available**, the other gets a dramatic in-app
+reveal of their real phone + email, plus an SMS reminder to come check.
+
+---
+
+## Where things stand
+
+| What | Where |
+|---|---|
+| 🟢 **MVP build (localStorage demo)** is shippable and runnable | [PLAN.md](./PLAN.md) |
+| 🚧 **Real backend (Supabase + Auth + Realtime)** is planned, not built | [BACKEND_PLAN.md](./BACKEND_PLAN.md) |
+
+If you're just looking to see the product feel, run the demo. If you're
+ready to make it work between two real people on two real phones, follow
+BACKEND_PLAN.md phase by phase.
+
+This repo will continue development in **Base44** — the local Next.js code
+is the design reference / spec.
+
+---
+
+## Run the demo
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# open http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The app ships with two seeded personas (Alice + Bob) already friends. Use
+the persona switcher (top-right) to flip between them and feel the
+unavailable → available reveal flow on a single device.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+To send **real SMS** from the demo, copy `.env.local.example` to
+`.env.local` and fill in your Twilio credentials.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## Architecture today
 
-To learn more about Next.js, take a look at the following resources:
+- Next.js 16 (App Router, Turbopack) + React 19 + TypeScript + Tailwind v4
+- All data in browser localStorage (key `funlma.v2` — kept for back-compat)
+- Framer Motion 12 for the reveal + lock + hearts animations
+- One server route: `/api/send-reveal-sms` — calls Twilio if configured,
+  else demo-no-op
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Architecture target (BACKEND_PLAN.md)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Same frontend, plus Supabase (Postgres + Auth + Realtime) for state
+- Phone OTP sign-in
+- Row-Level Security: contact info visible to friends iff `status='available'`
+- Real-time reveal popups via Supabase Realtime subscriptions
+- Deploy on Vercel
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Quick links
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [PLAN.md](./PLAN.md) — what's built, why, and what's deferred
+- [BACKEND_PLAN.md](./BACKEND_PLAN.md) — phase-by-phase plan to make it real
+- [COMPETITORS.md](./COMPETITORS.md) — competitive landscape research
+- [`AGENTS.md`](./AGENTS.md) — heads-up for AI coding agents working on this repo
