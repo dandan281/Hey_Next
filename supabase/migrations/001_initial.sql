@@ -7,6 +7,10 @@
 --   friendships    -- bidirectional with canonical ordering (user_a < user_b)
 --   reveal_events  -- in-app notifications when someone flips available
 --   sent_messages  -- outbound SMS queue + delivery status
+--
+-- Order matters: tables that other tables' RLS policies reference must be
+-- created first. Specifically, friendships is created before private_contacts
+-- because private_contacts' SELECT policy joins against friendships.
 
 -- ============================================================
 -- PROFILES (public-ish: handle, display name, status, gender, bio)
@@ -30,19 +34,16 @@ create index profiles_status_idx on public.profiles (status) where status = 'ava
 
 alter table public.profiles enable row level security;
 
--- Anyone signed in can read any profile (public-ish info only)
 create policy "profiles_read_all"
   on public.profiles for select
   to authenticated
   using (true);
 
--- You can only insert your own profile row
 create policy "profiles_insert_own"
   on public.profiles for insert
   to authenticated
   with check (id = auth.uid());
 
--- You can only update your own profile row
 create policy "profiles_update_own"
   on public.profiles for update
   to authenticated
@@ -50,7 +51,64 @@ create policy "profiles_update_own"
   with check (id = auth.uid());
 
 -- ============================================================
+-- FRIENDSHIPS (created early so other tables' policies can reference it)
+-- ============================================================
+
+create table public.friendships (
+  id         uuid primary key default gen_random_uuid(),
+  user_a     uuid not null references public.profiles (id) on delete cascade,
+  user_b     uuid not null references public.profiles (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  check (user_a < user_b),
+  unique (user_a, user_b)
+);
+
+create index friendships_user_a_idx on public.friendships (user_a);
+create index friendships_user_b_idx on public.friendships (user_b);
+
+alter table public.friendships enable row level security;
+
+create policy "friendships_read_own"
+  on public.friendships for select
+  to authenticated
+  using (user_a = auth.uid() or user_b = auth.uid());
+
+create policy "friendships_insert_own"
+  on public.friendships for insert
+  to authenticated
+  with check (user_a = auth.uid() or user_b = auth.uid());
+
+create policy "friendships_delete_own"
+  on public.friendships for delete
+  to authenticated
+  using (user_a = auth.uid() or user_b = auth.uid());
+
+create or replace function public.normalize_friendship_pair()
+returns trigger
+language plpgsql
+as $$
+declare
+  tmp uuid;
+begin
+  if new.user_a = new.user_b then
+    raise exception 'Cannot friend yourself';
+  end if;
+  if new.user_a > new.user_b then
+    tmp := new.user_a;
+    new.user_a := new.user_b;
+    new.user_b := tmp;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger normalize_friendship_pair_trig
+  before insert or update on public.friendships
+  for each row execute function public.normalize_friendship_pair();
+
+-- ============================================================
 -- PRIVATE_CONTACTS (phone + email; the sensitive stuff)
+-- Now safe to create — friendships exists for the SELECT policy.
 -- ============================================================
 
 create table public.private_contacts (
@@ -93,65 +151,6 @@ create policy "private_contacts_update_own"
   with check (user_id = auth.uid());
 
 -- ============================================================
--- FRIENDSHIPS (bidirectional; canonical ordering user_a < user_b)
--- ============================================================
-
-create table public.friendships (
-  id         uuid primary key default gen_random_uuid(),
-  user_a     uuid not null references public.profiles (id) on delete cascade,
-  user_b     uuid not null references public.profiles (id) on delete cascade,
-  created_at timestamptz not null default now(),
-  check (user_a < user_b),
-  unique (user_a, user_b)
-);
-
-create index friendships_user_a_idx on public.friendships (user_a);
-create index friendships_user_b_idx on public.friendships (user_b);
-
-alter table public.friendships enable row level security;
-
--- You can only see friendships you're part of
-create policy "friendships_read_own"
-  on public.friendships for select
-  to authenticated
-  using (user_a = auth.uid() or user_b = auth.uid());
-
--- You can only insert friendships you're part of (V1: unilateral add, like Snap)
-create policy "friendships_insert_own"
-  on public.friendships for insert
-  to authenticated
-  with check (user_a = auth.uid() or user_b = auth.uid());
-
--- You can only delete friendships you're part of
-create policy "friendships_delete_own"
-  on public.friendships for delete
-  to authenticated
-  using (user_a = auth.uid() or user_b = auth.uid());
-
--- Helper: enforce canonical ordering on insert
-create or replace function public.normalize_friendship_pair()
-returns trigger
-language plpgsql
-as $$
-begin
-  if new.user_a > new.user_b then
-    declare tmp uuid := new.user_a; begin
-      new.user_a := new.user_b;
-      new.user_b := tmp;
-    end;
-  end if;
-  if new.user_a = new.user_b then
-    raise exception 'Cannot friend yourself';
-  end if;
-  return new;
-end;
-$$;
-
-create trigger normalize_friendship_pair_trig
-  before insert or update on public.friendships
-  for each row execute function public.normalize_friendship_pair();
-
--- ============================================================
 -- REVEAL_EVENTS (in-app notification when a friend goes available)
 -- ============================================================
 
@@ -171,19 +170,16 @@ create index reveal_events_to_user_unseen_idx
 
 alter table public.reveal_events enable row level security;
 
--- You can read events addressed to you, OR events you authored
 create policy "reveal_events_read_own"
   on public.reveal_events for select
   to authenticated
   using (to_user_id = auth.uid() or from_user_id = auth.uid());
 
--- You can only insert events authored by you
 create policy "reveal_events_insert_own"
   on public.reveal_events for insert
   to authenticated
   with check (from_user_id = auth.uid());
 
--- You can mark events seen ONLY if they're addressed to you
 create policy "reveal_events_update_own"
   on public.reveal_events for update
   to authenticated
@@ -209,28 +205,19 @@ create index sent_messages_from_user_idx on public.sent_messages (from_user_id, 
 
 alter table public.sent_messages enable row level security;
 
--- You can only see messages you sent
 create policy "sent_messages_read_own"
   on public.sent_messages for select
   to authenticated
   using (from_user_id = auth.uid());
 
--- You can only insert messages you sent
 create policy "sent_messages_insert_own"
   on public.sent_messages for insert
   to authenticated
   with check (from_user_id = auth.uid());
 
 -- ============================================================
--- AUTO-CREATE PROFILE on auth signup (optional convenience)
--- ============================================================
--- We *don't* auto-create here because the onboarding flow needs to collect
--- handle/display_name/gender before the profile row makes sense. The client
--- creates the row after collecting those fields.
-
--- ============================================================
 -- REALTIME (Phase 3 will subscribe to these)
 -- ============================================================
--- Enable Realtime on profiles (status changes) and reveal_events (notifications)
+
 alter publication supabase_realtime add table public.profiles;
 alter publication supabase_realtime add table public.reveal_events;
