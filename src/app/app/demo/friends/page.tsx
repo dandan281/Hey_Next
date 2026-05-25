@@ -30,7 +30,7 @@ export default function FriendsPage() {
             no friends yet. give someone your Hey Next.
           </div>
           <Link
-            href="/app/add"
+            href="/app/demo/add"
             className="mt-4 inline-block rounded-full bg-gradient-to-r from-accent to-accent-2 px-5 py-2 text-sm font-medium text-white"
           >
             + add friend

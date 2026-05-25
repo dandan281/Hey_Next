@@ -69,7 +69,7 @@ export default function AppHomePage() {
 
       <section className="grid grid-cols-2 gap-3">
         <Link
-          href="/app/friends"
+          href="/app/demo/friends"
           className="card-glass rounded-2xl p-4 transition hover:bg-card-hover"
         >
           <div className="text-3xl font-bold tracking-tight">
@@ -84,7 +84,7 @@ export default function AppHomePage() {
           )}
         </Link>
         <Link
-          href="/app/add"
+          href="/app/demo/add"
           className="flex flex-col justify-center rounded-2xl border border-accent/40 bg-gradient-to-br from-accent/15 to-accent-2/10 p-4 transition hover:from-accent/25"
           style={{ boxShadow: "0 0 24px -8px rgba(255,61,127,0.4)" }}
         >

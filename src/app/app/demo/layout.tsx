@@ -23,8 +23,8 @@ export default function AppLayout({
   useEffect(() => {
     if (!ready) return;
     if (!activeUser) {
-      if (pathname !== "/app/onboarding") {
-        router.replace("/app/onboarding");
+      if (pathname !== "/app/demo/onboarding") {
+        router.replace("/app/demo/onboarding");
       }
       return;
     }
@@ -60,9 +60,12 @@ export default function AppLayout({
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col">
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/80 px-4 py-3 backdrop-blur-md">
-        <Link href="/app" aria-label="Hey Next home">
+        <Link href="/app/demo" aria-label="Hey Next demo home">
           <LogoLockup size={26} text="Hey Next" />
         </Link>
+        <span className="ml-auto mr-3 rounded-full border border-border bg-background/40 px-2 py-0.5 text-[9px] uppercase tracking-[0.2em] text-muted">
+          demo
+        </span>
         <PersonaSwitcher />
       </header>
 
@@ -87,7 +90,7 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   {
-    href: "/app",
+    href: "/app/demo",
     label: "me",
     icon: (active) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -97,7 +100,7 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    href: "/app/friends",
+    href: "/app/demo/friends",
     label: "friends",
     icon: (active) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -109,7 +112,7 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    href: "/app/add",
+    href: "/app/demo/add",
     label: "add",
     icon: (active) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -119,7 +122,7 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    href: "/app/activity",
+    href: "/app/demo/activity",
     label: "activity",
     icon: (active) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={active ? 1.6 : 1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -135,8 +138,8 @@ function BottomNav({ pathname }: { pathname: string }) {
       <div className="flex">
         {NAV_ITEMS.map((it) => {
           const active =
-            it.href === "/app"
-              ? pathname === "/app"
+            it.href === "/app/demo"
+              ? pathname === "/app/demo"
               : pathname.startsWith(it.href);
           return (
             <Link

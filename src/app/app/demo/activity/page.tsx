@@ -57,7 +57,7 @@ export default function ActivityPage() {
             will get a text.
           </div>
           <Link
-            href="/app"
+            href="/app/demo"
             className="mt-4 inline-block rounded-full border border-border px-4 py-2 text-sm text-muted hover:border-accent hover:text-foreground"
           >
             ← back to profile

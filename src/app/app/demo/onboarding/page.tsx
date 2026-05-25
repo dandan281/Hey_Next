@@ -43,7 +43,7 @@ export default function OnboardingPage() {
       statusNote: "just here, vibing",
     });
     update((prev) => setActivePersona(upsertUser(prev, user), user.id));
-    router.replace("/app");
+    router.replace("/app/demo");
   };
 
   return (
@@ -117,7 +117,7 @@ export default function OnboardingPage() {
               )
             ) {
               resetStore();
-              router.replace("/app");
+              router.replace("/app/demo");
             }
           }}
           className="mt-3 block underline hover:text-accent"

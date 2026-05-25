@@ -15,7 +15,7 @@ export default function AddFriendPage() {
 
   const myUrl =
     typeof window !== "undefined"
-      ? `${window.location.origin}/app/add?h=${activeUser.handle}`
+      ? `${window.location.origin}/app/demo/add?h=${activeUser.handle}`
       : "";
 
   const others = Object.values(store.users).filter(

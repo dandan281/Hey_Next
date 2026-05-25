@@ -8,10 +8,10 @@ export default function Landing() {
           <span className="gradient-text">Hey Next</span>
         </div>
         <Link
-          href="/app"
+          href="/login"
           className="rounded-full border border-border px-4 py-1.5 text-sm text-muted transition hover:border-accent hover:text-foreground"
         >
-          open app →
+          sign in →
         </Link>
       </nav>
 
@@ -37,16 +37,16 @@ export default function Landing() {
         </p>
         <div className="flex flex-wrap gap-3 pt-2">
           <Link
-            href="/app"
+            href="/login"
             className="rounded-full bg-gradient-to-r from-accent to-accent-2 px-6 py-3 font-medium text-white transition hover:opacity-90"
           >
-            try the demo →
+            sign in with phone →
           </Link>
           <Link
-            href="/app/onboarding"
+            href="/app/demo"
             className="rounded-full border border-border px-6 py-3 font-medium text-muted transition hover:border-accent hover:text-foreground"
           >
-            create a persona
+            try the demo
           </Link>
         </div>
       </header>
