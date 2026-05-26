@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { LogoLockup } from "@/components/Logo";
 import { signOut } from "@/app/login/actions";
+import { getUnseenInboundReveals } from "@/lib/db";
+import { BottomNav } from "./_BottomNav";
+import { RealRevealClient } from "./_RealRevealClient";
 
 export default async function AppLayout({
   children,
@@ -14,6 +17,8 @@ export default async function AppLayout({
   if (!auth.user) {
     redirect("/login");
   }
+
+  const initialReveals = await getUnseenInboundReveals(supabase);
 
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col">
@@ -32,6 +37,13 @@ export default async function AppLayout({
       </header>
 
       <main className="flex-1 pb-20">{children}</main>
+
+      <BottomNav />
+
+      <RealRevealClient
+        currentUserId={auth.user.id}
+        initialReveals={initialReveals}
+      />
     </div>
   );
 }

@@ -365,12 +365,64 @@ function mapRevealEvent(row: RevealEventRow): RevealEvent {
 export async function getUnseenEvents(
   supabase: SupabaseClient,
 ): Promise<RevealEvent[]> {
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return [];
   const { data } = await supabase
     .from("reveal_events")
     .select("*")
     .eq("seen", false)
+    .eq("to_user_id", auth.user.id)
     .order("created_at", { ascending: false });
   return (data ?? []).map(mapRevealEvent);
+}
+
+export type InboundReveal = {
+  event: RevealEvent;
+  fromProfile: ProfileWithContact;
+};
+
+/**
+ * Unseen reveal_events received by the current user, enriched with sender
+ * profile + contact info (visible because sender flipped to available).
+ */
+export async function getUnseenInboundReveals(
+  supabase: SupabaseClient,
+): Promise<InboundReveal[]> {
+  const events = await getUnseenEvents(supabase);
+  if (events.length === 0) return [];
+
+  const fromIds = Array.from(new Set(events.map((e) => e.fromUserId)));
+
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("*")
+    .in("id", fromIds);
+
+  const { data: contacts } = await supabase
+    .from("private_contacts")
+    .select("*")
+    .in("user_id", fromIds);
+
+  const contactByUserId = new Map<string, PrivateContactRow>();
+  for (const c of contacts ?? []) contactByUserId.set(c.user_id, c);
+
+  const profileById = new Map<string, ProfileWithContact>();
+  for (const p of (profiles ?? []) as ProfileRow[]) {
+    const c = contactByUserId.get(p.id);
+    profileById.set(p.id, {
+      ...mapProfile(p),
+      phone: c?.phone ?? null,
+      email: c?.email ?? null,
+    });
+  }
+
+  return events
+    .map((e) => {
+      const fromProfile = profileById.get(e.fromUserId);
+      if (!fromProfile) return null;
+      return { event: e, fromProfile };
+    })
+    .filter((x): x is InboundReveal => x !== null);
 }
 
 export async function markEventSeen(
@@ -395,6 +447,41 @@ export async function markAllEventsSeen(
 // ============================================================
 // SENT MESSAGES (SMS log)
 // ============================================================
+
+type SentMessageRow = {
+  id: string;
+  from_user_id: string;
+  to_user_id: string;
+  to_phone: string;
+  body: string;
+  status: SentMessageStatus;
+  error: string | null;
+  created_at: string;
+};
+
+function mapSentMessage(row: SentMessageRow): SentMessage {
+  return {
+    id: row.id,
+    fromUserId: row.from_user_id,
+    toUserId: row.to_user_id,
+    toPhone: row.to_phone,
+    body: row.body,
+    status: row.status,
+    error: row.error,
+    createdAt: row.created_at,
+  };
+}
+
+export async function getSentMessages(
+  supabase: SupabaseClient,
+): Promise<SentMessage[]> {
+  const { data } = await supabase
+    .from("sent_messages")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(100);
+  return (data ?? []).map(mapSentMessage);
+}
 
 export function buildRevealSmsBody(
   fromName: string,

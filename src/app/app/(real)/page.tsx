@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/db";
+import { StatusToggleReal } from "./_StatusToggleReal";
 
 export default async function AppHomePage() {
   const supabase = await createSupabaseServerClient();
@@ -10,11 +12,40 @@ export default async function AppHomePage() {
     redirect("/app/onboarding");
   }
 
-  const isAvailable = profile.status === "available";
+  // Friends — passed to the toggle for the selective-reveal picker
+  const { data: friendships } = await supabase
+    .from("friendships")
+    .select("user_a, user_b");
+  const friendIds = (friendships ?? [])
+    .map((f) => (f.user_a === profile.id ? f.user_b : f.user_a))
+    .filter((id) => id !== profile.id);
+
+  type FriendOption = {
+    id: string;
+    displayName: string;
+    avatarHue: number;
+    status: "available" | "unavailable";
+  };
+  let friends: FriendOption[] = [];
+  if (friendIds.length > 0) {
+    const { data: friendProfiles } = await supabase
+      .from("profiles")
+      .select("id, display_name, avatar_hue, status")
+      .in("id", friendIds);
+    friends = (friendProfiles ?? []).map((p) => ({
+      id: p.id,
+      displayName: p.display_name,
+      avatarHue: p.avatar_hue,
+      status: p.status,
+    }));
+  }
 
   return (
     <div className="space-y-5 px-4 py-6">
-      <section className="card-glass rounded-3xl p-5">
+      <Link
+        href="/app/settings"
+        className="block rounded-3xl card-glass p-5 transition hover:bg-card-hover"
+      >
         <div className="flex items-center gap-4">
           <div
             className="flex h-16 w-16 items-center justify-center rounded-full text-xl font-semibold text-white shadow-lg"
@@ -37,27 +68,17 @@ export default async function AppHomePage() {
               @{profile.handle}
             </div>
           </div>
+          <span className="text-[10px] uppercase tracking-[0.2em] text-muted">
+            edit
+          </span>
         </div>
-      </section>
+      </Link>
 
-      <section className="card-glass rounded-3xl p-6">
-        <div className="text-[10px] uppercase tracking-[0.3em] text-muted">
-          your status
-        </div>
-        <div className="mt-2 text-3xl font-bold tracking-tight">
-          {isAvailable ? (
-            <span className="gradient-text">available</span>
-          ) : (
-            <span className="text-foreground/90">unavailable</span>
-          )}
-        </div>
-        <div className="mt-3 rounded-xl border border-accent-2/30 bg-accent-2/5 p-3 text-xs text-muted">
-          <span className="text-foreground">phase 1 ✓ </span>
-          you&apos;re signed in and your profile is saved in the real DB.
-          friends list, status toggle, QR add, and real-time reveals land in
-          phases 2–4.
-        </div>
-      </section>
+      <StatusToggleReal
+        status={profile.status}
+        statusNote={profile.statusNote}
+        friends={friends}
+      />
 
       <section className="card-glass rounded-3xl p-6">
         <div className="text-[10px] uppercase tracking-[0.3em] text-muted">
